@@ -1,0 +1,3 @@
+promtail/log/*.log
+.venv/*
+*/__pycache__/*
