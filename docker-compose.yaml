@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki_container
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+    
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail_container
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml
+      - ./promtail/log:/var/log
+    command: -config.file=/etc/promtail/promtail-config.yml
+
+  fastapi:
+    image: python:3.9
+    container_name: fastapi_container
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/:/app
+      - ./promtail/log:/app/log
+    working_dir: /app
+    command: /bin/bash -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_container
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+  client:
+    image: python:3.9
+    container_name: client_container
+    volumes:
+      - ./client:/client
+    working_dir: /client
+    command: /bin/bash -c "pip install -r requirements.txt && python main.py"
+volumes:
+  grafana_data:
